@@ -1,0 +1,31 @@
+# Mirrors space/ to the Hugging Face Space and hf-npu/README.md to the NPU program repo's model card, so both are
+# edited here. Needs the repository secret HF_TOKEN: a Hugging Face token with write access to both repos.
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [main]
+    paths: ["space/**", "hf-npu/README.md"]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "huggingface_hub==2.3.0"
+      - name: Space (exact mirror of space/)
+        run: hf upload cukrus/redline-tiny space . --type space --delete "*" --commit-message "Sync from GitHub ${GITHUB_SHA::7}"
+      - name: NPU program model card
+        run: |
+          if hf models info cukrus/redline-tiny-npu > /dev/null 2>&1; then
+            hf upload cukrus/redline-tiny-npu hf-npu/README.md README.md --type model --commit-message "Sync from GitHub ${GITHUB_SHA::7}"
+          else
+            echo "cukrus/redline-tiny-npu does not exist yet: model card not synced"
+          fi

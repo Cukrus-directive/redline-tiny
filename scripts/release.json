@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "model_repo": "Qwen/Qwen-Image-2.1-Turbo",
+  "model_revision": "fc13ba1986fcb905854dc8de2f52eee395f49b5b",
+  "npu_repo": "cukrus/redline-tiny-npu",
+  "npu_revision": "main",
+  "uv_url": "https://github.com/astral-sh/uv/releases/download/0.13.6/uv-x86_64-pc-windows-msvc.zip",
+  "xrt_sdk_url": "https://github.com/Xilinx/XRT/releases/download/2.21.75/xrt_windows_sdk.zip",
+  "python": "3.13",
+  "min_npu_driver": "32.0.20101.3760",
+  "min_ram_gb": 30,
+  "min_free_gb": 60
+}

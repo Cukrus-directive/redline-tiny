@@ -1,0 +1,284 @@
+# n32_core.py -*- Python -*-
+#
+# Copyright (C) 2026 Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# Modified for redline-tiny (2026): derived from mlir-aie's block_datatypes GEMM examples (any-K / any-M runtime sequences, fused epilogues); see NOTICE.
+#
+"""n32_div.py: n32_core.py with the ATB ratio as a parameter (--div 2: 64-row A tiles, half the calls).
+
+32-core (8 cols x 4 rows) asymmetric-tile-buffered bfp16ebs8 GEMM —
+``@iron.jit`` IRON design.
+
+Same shape family as config2 (all-bfp16 inputs/outputs, 32 cores) but
+with asymmetry ratio DIV=4 and an alternate hand-tuned microkernel
+schedule (bf16-staged C accumulation). Strix-only; Peano-built kernel.
+
+Qwen port copy of upstream v1.4.4 config3: K is passed to the microkernel (-DK_PROBLEMSIZE), so any K that is a
+multiple of 64 works (upstream hard-codes 4096). Host layouts: npu_layouts.a_layout / b_layout / c_unlayout_atb.
+"""
+
+import argparse
+import os
+from pathlib import Path
+
+import aie.iron as iron
+import numpy as np
+from aie.dialects.aiex import v8bfp16ebs8
+from aie.helpers.taplib import TensorAccessPattern
+from aie.iron import (
+    CompileTime,
+    ExternalFunction,
+    In,
+    ObjectFifo,
+    Out,
+    Program,
+    Runtime,
+    TaskGroup,
+    Worker,
+)
+from aie.iron.controlflow import range_
+from aie.utils.hostruntime.argparse import (
+    add_compile_args,
+    device_from_args,
+)
+from aie.utils.hostruntime.cli import run_design_cli
+
+_KERNEL_SRC = Path(__file__).resolve().parent / "mm_bfp_rho.cc"
+_AIE_KERNELS_INC = Path(os.environ.get("MLIR_AIE_SRC", "")) / "aie_kernels"
+
+
+
+@iron.jit(aiecc_flags=["--dynamic-objFifos"])
+def n32_core_gemm(
+    A: In,
+    B: In,
+    C: Out,
+    *,
+    M: CompileTime[int] = 4096,
+    K: CompileTime[int] = 4096,
+    N: CompileTime[int] = 2048,
+    m: CompileTime[int] = 128,
+    k: CompileTime[int] = 64,
+    n: CompileTime[int] = 128,
+    NOOP: CompileTime[int] = 0,
+    TRACE: CompileTime[int] = 0,
+    DIV: CompileTime[int] = 2,
+):
+    n_aie_cols = 8
+    n_aie_rows = 4
+    tb_max_n_rows = 4
+
+    A_l2_ty = np.ndarray[(m, k // 8), np.dtype[v8bfp16ebs8]]
+    B_l2_ty = np.ndarray[(k, n // 8), np.dtype[v8bfp16ebs8]]
+    C_l2_ty = np.ndarray[(n_aie_rows * m, n // 8), np.dtype[v8bfp16ebs8]]
+    A_l1_ty = np.ndarray[(m // DIV, k // 8), np.dtype[v8bfp16ebs8]]
+    B_l1_ty = np.ndarray[(k, n // 8), np.dtype[v8bfp16ebs8]]
+    C_l1_ty = np.ndarray[(m, n // 8), np.dtype[v8bfp16ebs8]]
+
+    kernel_flags = [
+        f"-I{_AIE_KERNELS_INC}",
+        f"-DK_PROBLEMSIZE={K}",
+        f"-DATB_RHO={DIV}",
+    ] + (["-DATB_NOOP"] if NOOP else [])
+
+    # This initializer also clears a TU-local bf16 staging buffer, not just C.
+    # It must bind the matmul's object rather than use the ordinary zero factory.
+    matmul_kernel = ExternalFunction(
+        "matmul_vectorized_bfp16",
+        object_file_name=f"mm_bfp_rho{DIV}_k{K}{'_noop' if NOOP else ''}.o",
+        source_file=str(_KERNEL_SRC),
+        arg_types=[A_l1_ty, B_l1_ty, C_l1_ty],
+        compile_flags=kernel_flags,
+    )
+    zero_kernel = matmul_kernel.object_file.bind("zero_kernel", [C_l1_ty])
+
+    A_l3l2_fifos: list[ObjectFifo] = []
+    A_l2l1_fifos: list[ObjectFifo] = []
+    B_l3l2_fifos: list[ObjectFifo] = []
+    B_l2l1_fifos: list[ObjectFifo] = []
+    C_l1l2_fifos: list[list[ObjectFifo]] = [[] for _ in range(n_aie_rows)]
+    C_l2l3_fifos: list[ObjectFifo] = []
+
+    for row in range(n_aie_rows):
+        a_l3l2 = ObjectFifo(A_l2_ty, name=f"A_L3L2_{row}", depth=2)
+        A_l3l2_fifos.append(a_l3l2)
+        A_l2l1_fifos.append(
+            a_l3l2.cons().forward(obj_type=A_l1_ty, name=f"A_L2L1_{row}", depth=2)
+        )
+
+    for col in range(n_aie_cols):
+        b_l3l2 = ObjectFifo(B_l2_ty, name=f"B_L3L2_{col}", depth=2)
+        B_l3l2_fifos.append(b_l3l2)
+        B_l2l1_fifos.append(
+            b_l3l2.cons().forward(obj_type=B_l1_ty, name=f"B_L2L1_{col}", depth=2)
+        )
+
+    for col in range(n_aie_cols):
+        c_l2l3 = ObjectFifo(C_l2_ty, name=f"C_L2L3_{col}", depth=2)
+        C_l2l3_fifos.append(c_l2l3)
+        of_offsets = [m * n // 8 * i for i in range(n_aie_rows)]
+        c_tmp_fifos = c_l2l3.prod().join(
+            of_offsets,
+            obj_types=[C_l1_ty] * n_aie_rows,
+            names=[f"C_L1L2_{col}_{row}" for row in range(n_aie_rows)],
+            depths=[1] * n_aie_rows,
+        )
+        for j in range(n_aie_rows):
+            C_l1l2_fifos[j].append(c_tmp_fifos[j])
+
+    tiles_per_core = (M // m) * (N // n) // (n_aie_cols * n_aie_rows)
+
+    def core_fn(in_a, in_b, out_c, zero, matmul):
+        for _ in range_(tiles_per_core) if tiles_per_core > 1 else range(1):
+            elem_out = out_c.acquire(1)
+            zero(elem_out)
+            for _ in range_(K // k):
+                elem_in_b = in_b.acquire(1)
+                for _ in range(DIV):
+                    elem_in_a = in_a.acquire(1)
+                    matmul(elem_in_a, elem_in_b, elem_out)
+                    in_a.release(1)
+                in_b.release(1)
+            out_c.release(1)
+
+    workers = Worker.grid(
+        n_aie_rows,
+        n_aie_cols,
+        lambda row, col: Worker(
+            core_fn,
+            [
+                A_l2l1_fifos[row].cons(),
+                B_l2l1_fifos[col].cons(),
+                C_l1l2_fifos[row][col].prod(),
+                zero_kernel,
+                matmul_kernel,
+            ],
+            stack_size=0x400,
+            # Reserve the kernel's static data explicitly: mm_bfp_mixed.cc
+            # holds the bf16 C staging buffer (c_bf16_2nd_half, 16384 B) plus
+            # two counters in .bss. Without this, buffer allocation leaves
+            # < 14 KB contiguous and the core-ELF link fails.
+            data_size=m * n // 2 * 2 + 8,
+        ),
+    )
+
+    A_ty = np.ndarray[(M * K // 8,), np.dtype[v8bfp16ebs8]]
+    B_ty = np.ndarray[(K * N // 8,), np.dtype[v8bfp16ebs8]]
+    C_ty = np.ndarray[(M * N // 8,), np.dtype[v8bfp16ebs8]]
+
+    A_taps = TensorAccessPattern.full((M * K // 8,)).tile((m * K // 8,))
+    B_taps = TensorAccessPattern.full((N * K // 8,)).tile((n * K // 8,))
+    C_taps = TensorAccessPattern.full((M * N // 8,)).tile((n_aie_rows * m * n // 8,))
+
+    num_row_tile = M // m // n_aie_rows
+    num_col_tile = N // n // n_aie_cols
+    num_groups = num_row_tile * num_col_tile
+
+    def sequence(a, b, c, A_prods, B_prods, C_conses):
+        slots: list[TaskGroup | None] = [None] * tb_max_n_rows
+
+        def finish_slot(idx: int):
+            slot = slots[idx]
+            assert slot is not None
+            slot.finish()
+
+        for group_idx in range(num_groups):
+            slot_idx = group_idx % tb_max_n_rows
+            tg = TaskGroup()
+            slots[slot_idx] = tg
+
+            a_base_idx = (group_idx // num_col_tile) * n_aie_rows
+            for row in range(n_aie_rows):
+                A_prods[row].fill(
+                    a,
+                    tap=A_taps[a_base_idx + row],
+                    group=tg,
+                    wait=False,
+                )
+            b_base_idx = (group_idx % num_col_tile) * n_aie_cols
+            for col in range(n_aie_cols):
+                B_prods[col].fill(
+                    b,
+                    tap=B_taps[b_base_idx + col],
+                    group=tg,
+                    wait=False,
+                )
+            c_base_idx = group_idx * n_aie_cols
+            for col in range(n_aie_cols):
+                C_conses[col].drain(
+                    c,
+                    tap=C_taps[c_base_idx + col],
+                    group=tg,
+                    wait=True,
+                )
+
+            if slot_idx == 1 and group_idx != 1:
+                finish_slot(2)
+                finish_slot(3)
+            if slot_idx == 3:
+                finish_slot(0)
+                finish_slot(1)
+
+        finish_slot(2)
+        finish_slot(3)
+
+    rt = Runtime(
+        sequence,
+        [
+            A_ty,
+            B_ty,
+            C_ty,
+            [f.prod() for f in A_l3l2_fifos],
+            [f.prod() for f in B_l3l2_fifos],
+            [f.cons() for f in C_l2l3_fifos],
+        ],
+    )
+
+    prog = Program(
+        iron.get_current_device(),
+        rt,
+        workers=[w for row in workers for w in row],
+    )
+    if TRACE > 0:  # event0/event1 bracket each microkernel call: traced cycles per call on one core of column 7
+        from aie.utils.trace.events import CoreEvent
+
+        # NOTE: at 32 cores this does not route ("Unable to find a legal routing", egress col 0 or 7)
+        prog.enable_trace(TRACE, workers=[workers[0][n_aie_cols - 1]], egress_shim_col=n_aie_cols - 1, coretile_events=[
+            CoreEvent.INSTR_EVENT_0, CoreEvent.INSTR_EVENT_1, CoreEvent.INSTR_VECTOR, CoreEvent.MEMORY_STALL,
+            CoreEvent.STREAM_STALL, CoreEvent.LOCK_STALL, CoreEvent.ACTIVE, CoreEvent.DISABLED])
+    return prog.resolve_program()
+
+
+def _make_argparser():
+    p = argparse.ArgumentParser(
+        prog="AIE 32-Core ATB GEMM (full bfp16ebs8 (alt kernel))",
+    )
+    add_compile_args(p, default_dev="npu2")
+    p.add_argument("-M", type=int, default=4096)
+    p.add_argument("-K", type=int, default=4096)
+    p.add_argument("-N", type=int, default=2048)
+    p.add_argument("-m", type=int, default=128)
+    p.add_argument("-k", type=int, default=64)
+    p.add_argument("-n", type=int, default=128)
+    p.add_argument("--noop", type=int, default=0, help="1 = microkernel does no maths (data-movement ablation)")
+    p.add_argument("--trace", type=int, default=0, help="trace buffer bytes on core (0,0); 0 = no trace")
+    p.add_argument("--div", type=int, default=2, choices=[2, 4], help="A L1 tile = 128/div rows per call")
+    return p
+
+
+def _compile_kwargs(opts):
+    return dict(M=opts.M, K=opts.K, N=opts.N, m=opts.m, k=opts.k, n=opts.n, NOOP=opts.noop, TRACE=opts.trace, DIV=opts.div)
+
+
+def main():
+    opts = _make_argparser().parse_args()
+    run_design_cli(
+        n32_core_gemm,
+        opts,
+        compile_kwargs=_compile_kwargs,
+        device=lambda o: device_from_args(o, n_cols=None),
+    )
+
+
+if __name__ == "__main__":
+    main()

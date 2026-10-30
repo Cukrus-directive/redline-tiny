@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>redline-tiny</title>
+<link rel="icon" href="/ui/icon.png">
+<link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">redline<span>-tiny</span></div>
+  <div class="status" id="status"><span class="dot"></span><span id="status-text">Connecting…</span></div>
+</header>
+
+<main class="layout">
+  <section class="panel controls">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-mode="edit" role="tab" aria-selected="true">Edit a photo</button>
+      <button class="tab" data-mode="generate" role="tab" aria-selected="false">Create from text</button>
+    </div>
+
+    <div id="drop" class="drop" tabindex="0">
+      <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+      <div class="drop-empty" id="drop-empty">
+        <div class="drop-icon">+</div>
+        <div><strong>Drop a photo here</strong> or click to choose one</div>
+        <div class="muted small">PNG, JPG or WebP. It's squared to 1024×1024.</div>
+      </div>
+      <img id="drop-preview" alt="" hidden>
+    </div>
+    <div class="crop-row" id="crop-row" hidden>
+      <span class="muted small">Keep the</span>
+      <div class="seg" id="crop">
+        <button data-v="left">left</button><button data-v="center" class="on">centre</button><button data-v="right">right</button>
+      </div>
+      <span class="muted small">of a wide photo</span>
+    </div>
+
+    <label class="label" for="prompt" id="prompt-label">What should change?</label>
+    <textarea id="prompt" rows="4" maxlength="2000" placeholder="e.g. make the car bright red"></textarea>
+    <div class="counter" id="counter">&nbsp;</div>
+
+    <details class="more">
+      <summary>Options</summary>
+      <div class="opt">
+        <span>Quality</span>
+        <div class="seg" id="steps">
+          <button data-v="8" class="on">Best (8)</button><button data-v="6">Faster (6)</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span>Seed</span>
+        <div class="seed">
+          <input id="seed" type="number" min="0" max="2147483647" placeholder="random">
+          <button id="seed-reuse" class="ghost small" title="Use the seed of the image you're looking at">use current</button>
+        </div>
+      </div>
+    </details>
+
+    <button id="go" class="go" disabled>Edit photo</button>
+    <div class="err" id="err" hidden></div>
+  </section>
+
+  <section class="panel viewer">
+    <div class="stage" id="stage">
+      <div class="placeholder" id="placeholder">
+        <div class="tach"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="r"></i><i class="r"></i><i class="r"></i></div>
+        <p>Your image appears here.</p>
+        <p class="muted small">Edits take about 45 s, new images about 35 s, all on the NPU.</p>
+      </div>
+      <div class="compare" id="compare" hidden>
+        <img id="img-after" alt="Result">
+        <div class="before-wrap" id="before-wrap"><img id="img-before" alt="Original"></div>
+        <div class="handle" id="handle"><span></span></div>
+        <div class="tag tag-l" id="tag-before">before</div><div class="tag tag-r">after</div>
+      </div>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="prog-text"><span id="stage-name">Starting…</span><span id="elapsed">0 s</span></div>
+      </div>
+    </div>
+    <div class="result-bar" id="result-bar" hidden>
+      <div class="meta" id="meta"></div>
+      <div class="actions">
+        <button class="ghost" id="again">Edit this result</button>
+        <a class="ghost btn" id="download" download>Save</a>
+        <button class="ghost" id="open-folder">Open folder</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<section class="history">
+  <div class="history-head"><h2>Recent</h2><span class="muted small" id="history-count"></span></div>
+  <div class="strip" id="strip"></div>
+</section>
+
+<footer class="foot muted small">
+  Runs entirely on this PC: Qwen-Image-2.1-Turbo on the Ryzen AI NPU. Non-commercial use only
+  (<a href="/docs/QWEN-RESEARCH-LICENSE.txt" target="_blank">Qwen Research License</a>).
+</footer>
+<script src="/ui/app.js"></script>
+</body>
+</html>

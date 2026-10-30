@@ -1,0 +1,11 @@
+# Everything the installer downloads or generates lives under these folders
+/runtime/
+/models/
+/data/
+/outputs/
+/logs/
+
+__pycache__/
+*.pyc
+*.log
+/settings.json

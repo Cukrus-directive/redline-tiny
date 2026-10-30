@@ -1,0 +1,3 @@
+# cmd.exe misparses batch files with Unix line endings (labels, long lines). Stored byte-for-byte with CRLF so the
+# GitHub ZIP download has them too.
+*.cmd -text

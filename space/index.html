@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>redline-tiny: Qwen-Image on a laptop NPU</title>
+<meta name="description" content="Qwen-Image-2.1-Turbo photo editing and text-to-image on the AMD Ryzen AI NPU of a Windows laptop. No GPU, no cloud.">
+<style>
+:root{
+  --bg:#0d0d10; --panel:#16161b; --panel2:#1d1d23; --line:#2b2b33;
+  --text:#ecebee; --muted:#a8a8b2; --red:#ff3b4a; --red2:#e0192e; --link:#ff6b78;
+  --code:#101014; --good:#ffb3ba;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f6f5f7; --panel:#ffffff; --panel2:#efedf0; --line:#dcd9de;
+    --text:#17171c; --muted:#5b5b66; --red:#d4152a; --red2:#c0101f; --link:#b50f21;
+    --code:#f0eef1; --good:#9c0e1d;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Segoe UI",Inter,system-ui,-apple-system,Helvetica,Arial,sans-serif}
+a{color:var(--link)}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+section{padding:40px 0 8px}
+h1,h2,h3{line-height:1.2;margin:0 0 12px}
+h2{font-size:1.6rem;padding-top:8px;border-top:1px solid var(--line);margin-top:0}
+p{margin:0 0 14px}
+.muted{color:var(--muted)}
+.hero{padding:56px 0 32px;background:
+  radial-gradient(900px 300px at 80% -10%, rgba(224,25,46,.22), transparent 70%)}
+.hero h1{font-size:clamp(2.4rem,8vw,4rem);letter-spacing:-.02em;margin-bottom:8px}
+.hero h1 b{color:var(--red)}
+.pitch{font-size:1.2rem;max-width:36em;color:var(--text)}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.btn{display:inline-block;padding:10px 18px;border-radius:8px;border:1px solid var(--red);text-decoration:none;font-weight:600;color:var(--text)}
+.btn.primary{background:var(--red2);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card b{display:block;font-size:1.5rem;color:var(--red)}
+.card span{color:var(--muted);font-size:.9rem}
+.flow{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:.95rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);font-weight:600}
+td.win{color:var(--good);font-weight:600}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+figure img{width:100%;height:auto;display:block;aspect-ratio:1/1;background:var(--panel2)}
+figcaption{padding:10px 12px;font-size:.88rem;color:var(--muted)}
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:0 0 14px}
+ol.steps li{counter-increment:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 12px 56px;margin-bottom:10px}
+ol.steps li::before{content:counter(s);position:absolute;left:14px;top:12px;width:30px;height:30px;border-radius:50%;background:var(--red2);color:#fff;font-weight:700;text-align:center;line-height:30px}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-family:Consolas,"Cascadia Mono",monospace;font-size:.9em;overflow-wrap:anywhere}
+ul{padding-left:1.2em;margin:0 0 14px}
+li{margin-bottom:6px}
+.note{border-left:3px solid var(--red);background:var(--panel);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;overflow-wrap:anywhere}
+footer{margin-top:40px;border-top:1px solid var(--line);padding:24px 0 48px;color:var(--muted);font-size:.88rem}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>redline<b>-tiny</b></h1>
+    <p class="pitch">Qwen-Image-2.1-Turbo photo editing and text-to-image on the Ryzen AI NPU of an ordinary Windows laptop. 1024×1024, 8 steps. No GPU, no cloud.</p>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/Cukrus-directive/redline-tiny">GitHub</a>
+      <a class="btn" href="https://huggingface.co/cukrus/redline-tiny-npu">NPU programs</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="what">
+  <h2>What it is</h2>
+  <p>Drop in a photo and say what should change, or describe a new picture. The text encoder, the 32-block DiT and the VAE decoder all run on the NPU. The Radeon iGPU encodes the input photo while the NPU reads the prompt, and the CPU only does glue.</p>
+  <p>Models stay loaded between requests. The same prompt, seed and photo give the same bytes every time.</p>
+  <div class="grid">
+    <div class="card"><b>44 s</b><span>per edit</span></div>
+    <div class="card"><b>32–37 s</b><span>per new image</span></div>
+    <div class="card"><b>1024×1024</b><span>8 steps, Turbo model</span></div>
+  </div>
+  <p class="muted" style="margin-top:14px">Ryzen AI 9 HX 375 (HP OmniBook Ultra 14). "tiny" is the laptop NPU build. A bigger sibling is coming :)</p>
+</section>
+
+<section id="pipeline">
+  <h2>Pipeline</h2>
+  <p>Red is the NPU, teal the iGPU, grey the CPU. The photo encode on the iGPU overlaps the text encoder, so it costs nothing. Text-to-image skips the photo branch.</p>
+  <img class="flow" src="flow.svg" alt="Pipeline diagram: photo and prompt go to the iGPU VAE encoder and the NPU text encoder, then the NPU DiT, then the NPU VAE decoder, then a 1024 by 1024 PNG. A first-run path converts official Qwen weights to bfp16 NPU layout.">
+  <p class="muted" style="margin-top:12px">Weights are bfp16: 8 values share one 8-bit exponent, 9 bytes per 8 values, laid out in the order the NPU cores read them. The conversion from the official weights runs once on your PC. What worked and what didn't is in <a href="https://github.com/Cukrus-directive/redline-tiny#amd-kernel-hell">AMD kernel hell</a>.</p>
+</section>
+
+<section id="benchmarks">
+  <h2>Benchmarks</h2>
+  <p>Ryzen AI 9 HX 375, 32 GB, warm server. Measured back to back against <a href="https://github.com/jia1217/vigenflow">VigenFlow</a> on the same laptop, from the same input and starting noise.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>redline-tiny</th><th>VigenFlow</th></tr></thead>
+    <tbody>
+      <tr><td>Edit, per image</td><td class="win">44 s</td><td>51–53 s E2E, 75 s wall incl. loading</td></tr>
+      <tr><td>DiT, 8-step edit</td><td class="win">30.5 s</td><td>42.4–44.0 s</td></tr>
+      <tr><td>Text-to-image, per image</td><td class="win">32–37 s</td><td>32.9–33.5 s E2E, 42–44 s wall</td></tr>
+      <tr><td>VAE decode</td><td>4.5 s warm, 6–7 s in the server</td><td class="win">2.8 s</td></tr>
+      <tr><td>One-shot edit incl. all model loading</td><td class="win">66.5–69.8 s</td><td>74.8–75.6 s</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="margin-top:14px">The DiT is faster mostly because the per-block glue (norms, RoPE, SwiGLU, residuals) runs fused on the NPU instead of on the CPU. The VAE decode and the text encoder cold start are still slower here.</p>
+</section>
+
+<section id="gallery">
+  <h2>Gallery</h2>
+  <p>Text-to-image on the NPU, 1024×1024, 8 steps, seed 0.</p>
+  <div class="gal">
+    <figure><img loading="lazy" src="gallery/au_01.png" alt="Kangaroos grazing at dawn in the Flinders Ranges"><figcaption>A mob of kangaroos grazing at dawn in the Flinders Ranges, red earth, river red gums, golden morning light</figcaption></figure>
+    <figure><img loading="lazy" src="gallery/au_02.png" alt="Uluru at sunset under a thunderstorm"><figcaption>Uluru at sunset under a building thunderstorm, desert oaks and spinifex in the foreground</figcaption></figure>
+    <figure><img loading="lazy" src="gallery/au_04.png" alt="Bondi Beach on a summer morning"><figcaption>Bondi Beach on a summer morning, surfers paddling out, red and yellow lifesaver flags, the ocean pool at the south end</figcaption></figure>
+    <figure><img loading="lazy" src="gallery/au_05.png" alt="A kookaburra on a snow gum branch"><figcaption>A kookaburra perched on a snow gum branch in the Victorian High Country, misty mountain ranges behind</figcaption></figure>
+    <figure><img loading="lazy" src="gallery/au_06.png" alt="An outback pub at dusk"><figcaption>A corrugated iron outback pub with a wide verandah at dusk, dusty utes parked out front, a red dirt road stretching away</figcaption></figure>
+  </div>
+</section>
+
+<section id="requirements">
+  <h2>Requirements</h2>
+  <ul>
+    <li>AMD Ryzen AI 300-series with an XDNA2 NPU. Only tested on the HX 375; reports from other chips are welcome.</li>
+    <li><strong>32 GB RAM.</strong> The NPU's buffers are pinned in system RAM, and the DiT alone peaks around 12 GB.</li>
+    <li>Windows 11 with <strong>NPU driver 32.0.20101.3760 or newer</strong> (XRT 2.21), from <a href="https://www.amd.com/en/support/download/drivers.html">AMD Software: Adrenalin Edition</a> or your laptop maker. Not the <code>NPU_RAI_*_WHQL.zip</code> drivers from the Ryzen AI Software page: those are the older 32.0.203.x branch.</li>
+    <li>About 52 GB of disk.</li>
+  </ul>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <ol class="steps">
+    <li>Download the ZIP from <a href="https://github.com/Cukrus-directive/redline-tiny">GitHub</a> and unzip it somewhere short, like <code>C:\redline-tiny</code>.</li>
+    <li>Run <code>Install.cmd</code>. It checks your PC and asks whether you already have the model and the NPU programs. Anything missing is only downloaded after it tells you what and how big. Packing the weights for the NPU takes a few minutes, once.</li>
+    <li>Double-click <code>redline-tiny</code> on the desktop. The app opens in your browser.</li>
+  </ol>
+  <p class="muted"><code>Install.cmd -CheckOnly</code> checks the chip, driver, RAM and disk without downloading anything.</p>
+</section>
+
+<section id="credits">
+  <h2>Credits and licences</h2>
+  <ul>
+    <li>Code: Apache-2.0. Some GEMM kernels are derived from AMD's <a href="https://github.com/Xilinx/mlir-aie">mlir-aie</a> examples (Apache-2.0 WITH LLVM-exception); everything is built with mlir-aie IRON and Peano.</li>
+    <li><a href="https://github.com/jia1217/vigenflow">VigenFlow</a> showed the way: the runtime-patched attention key count and the shape-generic VAE decoder programs come from it, rebuilt from scratch. 16 beers in debt.</li>
+    <li>Model: Qwen-Image-2.1-Turbo by the Qwen team, under the Qwen Research License, non-commercial use only. The installer downloads the official files from Hugging Face.</li>
+  </ul>
+  <div class="note">Qwen is licensed under the Qwen RESEARCH LICENSE AGREEMENT, Copyright (c) 2026 Hangzhou Tongyi Laboratory Technology Co., Ltd. All Rights Reserved.</div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    redline-tiny is not affiliated with AMD or Qwen. AMD, Ryzen, Radeon and XDNA are trademarks of Advanced Micro Devices, Inc.<br>
+    <a href="https://github.com/Cukrus-directive/redline-tiny">GitHub</a> · <a href="https://huggingface.co/cukrus/redline-tiny-npu">NPU programs on Hugging Face</a>
+  </div>
+</footer>
+
+</body>
+</html>

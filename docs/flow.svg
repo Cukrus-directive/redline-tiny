@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="930" viewBox="0 0 1200 930" role="img" aria-labelledby="t d" font-family="Segoe UI, Inter, system-ui, -apple-system, Helvetica, Arial, sans-serif">
+  <title id="t">redline-tiny image edit pipeline</title>
+  <desc id="d">Photo and prompt go to a VAE encoder on the iGPU and a text encoder on the NPU at the same time, then the DiT on the NPU, then the VAE decoder on the NPU, then a PNG. Text-to-image skips the image branch. A one-time first run converts official Qwen weights to bfp16 NPU layout.</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#c9c9d1"/></marker>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ff3b4a"/></marker>
+    <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2bb3c0"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="930" rx="18" fill="#0d0d10"/>
+  <rect x="0" y="0" width="1200" height="5" rx="2" fill="#e0192e"/>
+
+  <text x="40" y="48" font-size="28" font-weight="700" fill="#f2f1f4">redline-tiny: image edit pipeline</text>
+  <text x="40" y="76" font-size="15" fill="#a8a8b2">Qwen-Image-2.1-Turbo at 1024×1024 on the Ryzen AI NPU. Text-to-image uses the same path without the photo branch.</text>
+
+  <!-- lanes -->
+  <rect x="20" y="100" width="1160" height="150" rx="10" fill="#2bb3c0" fill-opacity="0.07"/>
+  <rect x="20" y="258" width="1160" height="330" rx="10" fill="#e0192e" fill-opacity="0.08"/>
+  <rect x="20" y="596" width="1160" height="100" rx="10" fill="#8a8a94" fill-opacity="0.08"/>
+  <text x="36" y="135" font-size="17" font-weight="700" fill="#2bb3c0">iGPU</text>
+  <text x="36" y="155" font-size="13" fill="#a8a8b2">Radeon 890M</text>
+  <text x="36" y="290" font-size="17" font-weight="700" fill="#ff3b4a">NPU</text>
+  <text x="36" y="310" font-size="13" fill="#a8a8b2">XDNA2, 32 cores</text>
+  <text x="36" y="630" font-size="17" font-weight="700" fill="#b4b4be">CPU</text>
+  <text x="36" y="650" font-size="13" fill="#a8a8b2">glue only</text>
+
+  <!-- input -->
+  <rect x="150" y="150" width="150" height="420" rx="10" fill="#17171c" stroke="#c9c9d1" stroke-width="1.5"/>
+  <text x="225" y="340" font-size="17" font-weight="700" fill="#f2f1f4" text-anchor="middle">Input</text>
+  <text x="225" y="364" font-size="14" fill="#c9c9d1" text-anchor="middle">Photo</text>
+  <text x="225" y="384" font-size="14" fill="#c9c9d1" text-anchor="middle">+ prompt</text>
+  <text x="225" y="412" font-size="13" fill="#a8a8b2" text-anchor="middle">resident</text>
+  <text x="225" y="430" font-size="13" fill="#a8a8b2" text-anchor="middle">server, warm</text>
+
+  <!-- iGPU VAE encoder -->
+  <rect x="330" y="150" width="250" height="90" rx="10" fill="#0d2a2e" stroke="#2bb3c0" stroke-width="2"/>
+  <text x="345" y="174" font-size="16" font-weight="700" fill="#f2f1f4">VAE encoder, fp16</text>
+  <text x="345" y="194" font-size="13" fill="#c9c9d1">DirectML, resized to 1024²</text>
+  <text x="345" y="212" font-size="13" fill="#c9c9d1">~0.6–0.8 s, hidden behind</text>
+  <text x="345" y="230" font-size="13" fill="#c9c9d1">the text encoder</text>
+
+  <!-- text-to-image note -->
+  <rect x="940" y="146" width="240" height="94" rx="10" fill="none" stroke="#a8a8b2" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="954" y="168" font-size="13" font-weight="700" fill="#f2f1f4">Text-to-image skips this</text>
+  <text x="954" y="187" font-size="13" fill="#c9c9d1">branch: no photo, no VAE</text>
+  <text x="954" y="205" font-size="13" fill="#c9c9d1">encoder, no vision tower.</text>
+  <text x="954" y="223" font-size="13" fill="#c9c9d1">Text stage ~3 s, not ~4.7 s.</text>
+
+  <!-- text encoder -->
+  <rect x="330" y="270" width="250" height="300" rx="10" fill="#2a0d12" stroke="#ff3b4a" stroke-width="2"/>
+  <text x="345" y="298" font-size="17" font-weight="700" fill="#f2f1f4">Text encoder</text>
+  <text x="345" y="320" font-size="14" fill="#ffb3ba">Qwen3-VL-8B</text>
+  <text x="345" y="348" font-size="13" font-weight="700" fill="#ff6b78">Vision tower (edit only)</text>
+  <text x="345" y="366" font-size="13" fill="#c9c9d1">27 blocks, hidden 1152</text>
+  <text x="345" y="394" font-size="13" font-weight="700" fill="#ff6b78">Language model</text>
+  <text x="345" y="412" font-size="13" fill="#c9c9d1">36 layers, hidden 4096</text>
+  <text x="345" y="440" font-size="13" fill="#c9c9d1">LM weights streamed layer by</text>
+  <text x="345" y="458" font-size="13" fill="#c9c9d1">layer, overlapped with compute</text>
+  <text x="345" y="490" font-size="13" fill="#a8a8b2">In the server: 6.6–9.3 s for</text>
+  <text x="345" y="508" font-size="13" fill="#a8a8b2">edits, ~3 s for text-to-image</text>
+  <rect x="345" y="524" width="220" height="38" rx="8" fill="#e0192e"/>
+  <text x="455" y="540" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">~4.7 s warm</text>
+  <text x="455" y="555" font-size="13" fill="#ffe3e6" text-anchor="middle">standalone, edit</text>
+
+  <!-- DiT -->
+  <rect x="610" y="270" width="310" height="300" rx="10" fill="#2a0d12" stroke="#ff3b4a" stroke-width="2"/>
+  <text x="625" y="298" font-size="17" font-weight="700" fill="#f2f1f4">DiT: Qwen-Image-2.1-Turbo</text>
+  <text x="625" y="320" font-size="14" fill="#ffb3ba">32 blocks, hidden 4096, 8 steps</text>
+  <text x="625" y="346" font-size="13" fill="#c9c9d1">Step 1: image + prompt, 8704 rows</text>
+  <text x="625" y="364" font-size="13" fill="#c9c9d1">Steps 2–8: cached ref K/V, 4096 rows</text>
+  <text x="625" y="392" font-size="13" font-weight="700" fill="#ff6b78">Per block, all on the NPU:</text>
+  <text x="625" y="411" font-size="13" fill="#c9c9d1">bfp16 GEMMs, ~33.5 TFLOPS</text>
+  <text x="625" y="429" font-size="13" fill="#c9c9d1">Flash attention, 19.5 TFLOPS (hd 128)</text>
+  <text x="625" y="447" font-size="13" fill="#c9c9d1">Fused glue: LayerNorm + modulation,</text>
+  <text x="625" y="465" font-size="13" fill="#c9c9d1">q/k RMSNorm + RoPE, SwiGLU, residuals</text>
+  <text x="625" y="493" font-size="13" fill="#a8a8b2">Two merged programs stay resident;</text>
+  <text x="625" y="511" font-size="13" fill="#a8a8b2">key count patched in at runtime</text>
+  <rect x="625" y="524" width="280" height="38" rx="8" fill="#e0192e"/>
+  <text x="765" y="540" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">~29–31 s for an edit</text>
+  <text x="765" y="555" font-size="13" fill="#ffe3e6" text-anchor="middle">~23–25 s for text-to-image</text>
+
+  <!-- VAE decoder -->
+  <rect x="950" y="270" width="230" height="300" rx="10" fill="#2a0d12" stroke="#ff3b4a" stroke-width="2"/>
+  <text x="965" y="298" font-size="17" font-weight="700" fill="#f2f1f4">VAE decoder</text>
+  <text x="965" y="320" font-size="14" fill="#ffb3ba">20 shape-generic programs</text>
+  <text x="965" y="360" font-size="13" fill="#a8a8b2">In the server: 5.9–8 s,</text>
+  <text x="965" y="378" font-size="13" fill="#a8a8b2">buffers rebuilt per request</text>
+  <text x="965" y="396" font-size="13" fill="#a8a8b2">to fit the RAM budget</text>
+  <rect x="965" y="524" width="200" height="38" rx="8" fill="#e0192e"/>
+  <text x="1065" y="540" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">~4.5 s warm</text>
+  <text x="1065" y="555" font-size="13" fill="#ffe3e6" text-anchor="middle">standalone</text>
+
+  <!-- CPU glue + output -->
+  <rect x="330" y="610" width="590" height="76" rx="10" fill="#1c1c21" stroke="#8a8a94" stroke-width="1.5"/>
+  <text x="345" y="632" font-size="15" font-weight="700" fill="#f2f1f4">CPU: light glue only</text>
+  <text x="345" y="652" font-size="13" fill="#c9c9d1">Timestep embedding, modulation vectors, scheduler,</text>
+  <text x="345" y="670" font-size="13" fill="#c9c9d1">a few tiny GEMMs, PNG write</text>
+  <rect x="950" y="610" width="230" height="76" rx="10" fill="#17171c" stroke="#c9c9d1" stroke-width="1.5"/>
+  <text x="965" y="638" font-size="15" font-weight="700" fill="#f2f1f4">Output</text>
+  <text x="965" y="660" font-size="14" fill="#c9c9d1">1024×1024 PNG</text>
+
+  <!-- arrows -->
+  <path d="M300 195 H328" stroke="#c9c9d1" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+  <path d="M300 420 H328" stroke="#c9c9d1" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+  <path d="M580 195 H765 V268" stroke="#2bb3c0" stroke-width="2.5" fill="none" marker-end="url(#arg)"/>
+  <text x="600" y="186" font-size="13" fill="#2bb3c0">image latents</text>
+  <path d="M580 420 H608" stroke="#ff3b4a" stroke-width="2.5" fill="none" marker-end="url(#arr)"/>
+  <path d="M920 420 H948" stroke="#ff3b4a" stroke-width="2.5" fill="none" marker-end="url(#arr)"/>
+  <path d="M1065 570 V608" stroke="#c9c9d1" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+  <path d="M765 608 V572" stroke="#8a8a94" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#ar)"/>
+  <path d="M455 608 V572" stroke="#8a8a94" stroke-width="2" stroke-dasharray="5 4" fill="none"/>
+
+  <!-- summary -->
+  <text x="600" y="722" font-size="16" font-weight="700" fill="#f2f1f4" text-anchor="middle">Resident server, end to end: edit 44–49 s per image · text-to-image 32–36 s per image</text>
+
+  <!-- first run -->
+  <rect x="20" y="740" width="1160" height="148" rx="12" fill="#131318" stroke="#3a3a42" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="40" y="768" font-size="16" font-weight="700" fill="#f2f1f4">First run only: one-time weight conversion, done once on your PC</text>
+  <rect x="40" y="782" width="300" height="86" rx="10" fill="#17171c" stroke="#c9c9d1" stroke-width="1.5"/>
+  <text x="190" y="816" font-size="15" font-weight="700" fill="#f2f1f4" text-anchor="middle">Official Qwen weights</text>
+  <text x="190" y="838" font-size="13" fill="#c9c9d1" text-anchor="middle">downloaded from Hugging Face</text>
+  <rect x="400" y="782" width="300" height="86" rx="10" fill="#1c1c21" stroke="#8a8a94" stroke-width="1.5"/>
+  <text x="550" y="816" font-size="15" font-weight="700" fill="#f2f1f4" text-anchor="middle">Local numpy packer</text>
+  <text x="550" y="838" font-size="13" fill="#c9c9d1" text-anchor="middle">runs once, on the CPU of your PC</text>
+  <rect x="760" y="782" width="400" height="86" rx="10" fill="#2a0d12" stroke="#ff3b4a" stroke-width="2"/>
+  <text x="960" y="806" font-size="15" font-weight="700" fill="#f2f1f4" text-anchor="middle">bfp16 NPU layout</text>
+  <text x="960" y="827" font-size="13" fill="#c9c9d1" text-anchor="middle">8 values share one 8-bit exponent</text>
+  <text x="960" y="845" font-size="13" fill="#c9c9d1" text-anchor="middle">9 bytes per 8 values, in NPU core order</text>
+  <path d="M340 825 H398" stroke="#c9c9d1" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+  <path d="M700 825 H758" stroke="#c9c9d1" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+
+  <text x="600" y="912" font-size="13" fill="#a8a8b2" text-anchor="middle">Measured on an HP OmniBook Ultra 14: Ryzen AI 9 HX 375, XDNA2 NPU, Radeon 890M, 32 GB RAM, Windows 11. Timings are warm.</text>
+</svg>

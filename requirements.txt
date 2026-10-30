@@ -1,0 +1,27 @@
+# redline-tiny runtime, Python 3.13 on Windows x64. Pinned to the versions the release was tested with.
+# scripts/install.ps1 installs these with uv; mlir-aie's eudsl extras and pyxrt are installed separately there.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+numpy==2.5.4
+ml_dtypes==0.6.0
+pillow==13.0.0
+safetensors==0.8.0
+huggingface_hub==2.2.0
+
+# NPU runtime: mlir-aie IRON (Apache-2.0 WITH LLVM-exception); its compiler (llvm-aie) is not needed to run
+mlir_aie @ https://github.com/Xilinx/mlir-aie/releases/download/v1.4.4/mlir_aie-1.4.4-cp313-cp313-win_amd64.whl
+aiofiles
+rich
+cloudpickle
+
+# Tokeniser, image preprocessing, the scheduler's noise and the one-time VAE export (CPU torch: no CUDA needed)
+torch==2.14.1
+torchvision==0.29.1
+transformers==5.20.2
+tokenizers==0.23.3
+accelerate==1.15.0
+diffusers @ https://github.com/huggingface/diffusers/archive/b800f828f3951c4d206e154411bcbfa693cd322e.zip
+
+# VAE encoder on the iGPU
+onnx==1.23.2
+onnxruntime-directml==1.24.4
