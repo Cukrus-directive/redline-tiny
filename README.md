@@ -34,7 +34,7 @@
 
 | | |
 |---|---|
-| Chip | AMD Ryzen AI 300-series with an **XDNA2 NPU**. Tested: Ryzen AI 9 HX 375 (Strix Point). |
+| Chip | AMD Ryzen AI 300-series with an **XDNA2 NPU**. Tested: Ryzen AI 9 HX 375 (Strix Point) and Ryzen AI 7 350 (Krackan Point). |
 | RAM | **32 GB**. The NPU's buffers live in pinned system RAM, and the DiT alone peaks at about 12 GB |
 | OS | Windows 11 with the AMD NPU driver **32.0.20101.3760 or newer** (XRT 2.21). See [NPU driver](#npu-driver) to avoid anger issues |
 | Disk | About **52 GB**: the official model 31 GB, its NPU-packed copy 17 GB, Python and the NPU programs about 4 GB |
@@ -165,7 +165,7 @@ I've attempted to re-use chess compiler after getting licensing from AMD, howeve
 
 - 1024×1024 only, one reference image per edit.
 - 32 GB RAM minimum. Close big apps first: the NPU's working set is pinned and can't be paged out. Suggest using [w11 efficiency booster](https://github.com/Cukrus-directive/W11EfficiencyBooster)
-- Tested on hx375 only. Reports from other Ryzen AI chips are very welcome. Open an issue and attach `logs\install.log` / `logs\server.log`.
+- Tested on hx375 and Ryzen AI 7 350, both work fine. Reports from other Ryzen AI chips are very welcome. Open an issue and attach `logs\install.log` / `logs\server.log`.
 - Windows only. The NPU programs are portable, but the runtime glue is Windows-specific (driver, DirectML).
 
 ## Licences

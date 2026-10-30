@@ -49,7 +49,7 @@ A merged ELF holds a whole DiT stage in one hardware context, so the kernels of 
 |---|---|
 | Toolchain | mlir-aie v1.4.4 (IRON), Peano / llvm-aie 22.0.0.2026092101 |
 | Target | `npu2`: XDNA2 (Strix), 32 AIE cores |
-| Tested on | Ryzen AI 9 HX 375, NPU driver 32.0.20102 |
+| Tested on | Ryzen AI 9 HX 375 and Ryzen AI 7 350, NPU driver 32.0.20102 |
 | Rebuilding | Sources in `kernels/`, steps in [docs/BUILDING.md](https://github.com/Cukrus-directive/redline-tiny/blob/main/docs/BUILDING.md) |
 
 ## Licence

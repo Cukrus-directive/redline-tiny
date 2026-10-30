@@ -404,7 +404,7 @@ $bad = $npuDev | Where-Object { $_.ConfigManagerErrorCode -ne 0 } | Select-Objec
 if ($bad) { Problem "NPU device reports an error in Device Manager (code $($bad.ConfigManagerErrorCode)). Reinstall the NPU driver and restart Windows."; $driverProblem = $true }
 if ($driverProblem) { Say $driverHelp "Yellow" }
 Say "CPU:     $cpu"
-if ($cpu -notmatch "Ryzen AI (9|7|5) (HX )?3[0-9]{2}|Ryzen AI Max") { Say "  WARNING: untested processor. Tested: Ryzen AI 9 HX 375." "Yellow" }
+if ($cpu -notmatch "Ryzen AI (9|7|5) (HX )?3[0-9]{2}|Ryzen AI Max") { Say "  WARNING: untested processor. Tested: Ryzen AI 9 HX 375, Ryzen AI 7 350." "Yellow" }
 $instGb = [math]::Round($ramInstalled / 1GB); $useGb = [math]::Round($ramUsable / 1GB, 1)
 Say "RAM:     $(if ($ramInstalled) { "$instGb GB installed, " })$useGb GB usable"
 if ($ramInstalled -and $instGb -lt 31) { Problem "32 GB RAM required ($instGb GB installed). The NPU's buffers are pinned in system RAM." }
