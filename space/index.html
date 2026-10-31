@@ -96,20 +96,24 @@ footer{margin-top:40px;border-top:1px solid var(--line);padding:24px 0 48px;colo
 
 <section id="benchmarks">
   <h2>Benchmarks</h2>
-  <p>Ryzen AI 9 HX 375, 32 GB, warm server. Measured back to back against <a href="https://github.com/jia1217/vigenflow">VigenFlow</a> on the same laptop, from the same input and starting noise.</p>
+  <p>1024×1024, warm server unless noted.</p>
   <div class="tw">
   <table>
-    <thead><tr><th></th><th>redline-tiny</th><th>VigenFlow</th></tr></thead>
+    <thead><tr><th></th><th>Model</th><th>Setup</th><th>Per image</th></tr></thead>
     <tbody>
-      <tr><td>Edit, per image</td><td class="win">44 s</td><td>51–53 s E2E, 75 s wall incl. loading</td></tr>
-      <tr><td>DiT, 8-step edit</td><td class="win">30.5 s</td><td>42.4–44.0 s</td></tr>
-      <tr><td>Text-to-image, per image</td><td class="win">32–37 s</td><td>32.9–33.5 s E2E, 42–44 s wall</td></tr>
-      <tr><td>VAE decode</td><td>4.5 s warm, 6–7 s in the server</td><td class="win">2.8 s</td></tr>
-      <tr><td>One-shot edit incl. all model loading</td><td class="win">66.5–69.8 s</td><td>74.8–75.6 s</td></tr>
+      <tr><td>redline-tiny, text-to-image</td><td>Qwen-Image-2.1-Turbo (7B DiT + 8B encoder)</td><td>HX 375 NPU, 8 steps</td><td class="win">32–37 s</td></tr>
+      <tr><td>redline-tiny, edit</td><td>Qwen-Image-2.1-Turbo (7B DiT + 8B encoder)</td><td>HX 375 NPU, 8 steps</td><td class="win">44 s</td></tr>
+      <tr><td>redline-tiny, edit, cold</td><td>Qwen-Image-2.1-Turbo</td><td>HX 375 NPU, 8 steps, incl. all model loading</td><td>66.5–69.8 s</td></tr>
+      <tr><td><a href="https://github.com/jia1217/vigenflow">VigenFlow</a>, text-to-image</td><td>Qwen-Image-2.1-Turbo</td><td>Same laptop, 8 steps</td><td>32.9–33.5 s</td></tr>
+      <tr><td>VigenFlow, edit</td><td>Qwen-Image-2.1-Turbo</td><td>Same laptop, 8 steps</td><td>51–53 s</td></tr>
+      <tr><td>VigenFlow, edit, cold</td><td>Qwen-Image-2.1-Turbo</td><td>Same laptop, incl. all model loading</td><td>74.8–75.6 s</td></tr>
+      <tr><td>Same edit on the CPU</td><td>Qwen-Image-2.1-Turbo</td><td>HX 375, PyTorch bf16</td><td>706 s</td></tr>
+      <tr><td>AMD/Stability NPU path (Amuse), <a href="https://www.pcworld.com/article/2853262/amd-gets-gpu-quality-ai-art-running-on-its-npus.html">PCWorld test</a></td><td>SD3 Medium (2B)</td><td>Ryzen AI 9 365 NPU, 20 steps</td><td>~90 s</td></tr>
+      <tr><td>Same, <a href="https://hothardware.com/news/amd-stable-diffusion-blockfp16-npu">HotHardware test</a></td><td>SD3 Medium (2B)</td><td>Ryzen AI Max+ 395 NPU, 1 MP + NPU upscale to 2048²</td><td>~70 s</td></tr>
     </tbody>
   </table>
   </div>
-  <p style="margin-top:14px">The DiT is faster mostly because the per-block glue (norms, RoPE, SwiGLU, residuals) runs fused on the NPU instead of on the CPU. The VAE decode and the text encoder cold start are still slower here.</p>
+  <p style="margin-top:14px">VigenFlow was measured back to back on the same laptop, from the same input and starting noise. The other rows are not apples to apples: different models, step counts and chips. The SD3 Medium times are reviewers' measurements; AMD publishes no per-image timings for its NPU image models. The NPU is about 16× faster than the CPU on the same edit.</p>
 </section>
 
 <section id="gallery">
