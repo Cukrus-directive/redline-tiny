@@ -95,6 +95,19 @@ This benchmark does not include FLM/Ryzen default AI stack as neither of them ca
 | VAE decode | 4.5 s warm, 6–7 s in the server | **2.8 s** |
 | One-shot edit incl. all model loading | **66.5–69.8 s** | 74.8–75.6 s |
 
+Big credit to VigenFlow again - the only other alternative worth using
+
+Other reference points. These are not apples to apples: different models, step counts and chips.
+
+| | Model | Setup | Per image |
+|---|---|---|---|
+| redline-tiny, edit | Qwen-Image-2.1-Turbo (7B DiT + 8B encoder) | HX 375 NPU, 1024², 8 steps | **44 s** |
+| Same edit on the CPU | Qwen-Image-2.1-Turbo | HX 375, PyTorch bf16 | 706 s |
+| AMD/Stability NPU path (Amuse), [PCWorld test](https://www.pcworld.com/article/2853262/amd-gets-gpu-quality-ai-art-running-on-its-npus.html) | SD3 Medium (2B) | Ryzen AI 9 365 NPU, 20 steps | ~90 s |
+| Same, [HotHardware test](https://hothardware.com/news/amd-stable-diffusion-blockfp16-npu) | SD3 Medium (2B) | Ryzen AI Max+ 395 NPU, 1 MP + NPU upscale to 2048² | ~70 s |
+
+The SD3 Medium times are reviewers' measurements. AMD publishes no per-image timings for its NPU image models.
+
 Both were measured on the same laptop, back to back, from the same input and starting noise. [VigenFlow](https://github.com/jia1217/vigenflow) is the clear and simple app running Qwen-Image on the Ryzen AI NPU, and the project that showed tile padding was me overthinking the NPU arch + saved me hours of testing. Its VAE decoder and its text-encoder cold start are faster than this as my focus was on warm serves and text encoder decoupling is in progress [Remote encoder](https://github.com/Cukrus-directive/qwen3-4b-remote-text-encoder). Two uplifts came from VigenFlow's inspiration for NPU programs: the runtime-patched attention key count and the shape-generic VAE decoder programs. I've reimplemented both from scratch to not re-use VigenFlow code. Thanks to its author who is an absolute legend and dropped it's flow right as I was giving up.
 
 ## AMD kernel hell
